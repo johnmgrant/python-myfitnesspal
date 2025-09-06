@@ -5,14 +5,13 @@
     "source.organizeImports": "always",
     "source.fixAll.pylance": "always",
     "source.organizeLinkDefinitions": "always",
-    "source.convertImportFormat": "always"
+    "source.convertImportFormat": "never"
   },
   "[python]": {
     "diffEditor.ignoreTrimWhitespace": false,
-    "editor.defaultColorDecorators": "never",
     "editor.formatOnType": false,
     "editor.wordBasedSuggestions": "off",
-    "editor.formatOnSave": true
+    "editor.formatOnSave": false
   },
   "python.analysis.typeCheckingMode": "standard"
 }
