@@ -15,6 +15,14 @@ class CommandDefinition(TypedDict):
 MyfitnesspalUserId = str
 
 
+class FriendDict(TypedDict):
+    username: str
+    last_login: str
+    hidden: bool
+    position: int
+    main_image_thumb_path: str
+
+
 class GoalDisplayDict(TypedDict):
     id: str
     display_type: str

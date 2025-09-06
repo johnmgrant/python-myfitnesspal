@@ -24,7 +24,6 @@ from .entry import Entry
 from .exceptions import MyfitnesspalLoginError, MyfitnesspalRequestFailed
 from .exercise import Exercise
 from .fooditem import FoodItem
-from .friend import Friend
 from .meal import Meal
 from .note import Note
 
@@ -602,12 +601,12 @@ class Client(MFPBase):
             lower_bound, upper_bound = upper_bound, lower_bound
         return upper_bound, lower_bound
 
-    def get_friends(self) -> list[str]:
+    def get_friends(self) -> list[types.FriendDict]:
         """Returns a list of friends."""
         document = self._get_document_for_url(self._get_url_for_friends())
-        friends = self._get_friends(document)
+        friends_dict = self._get_friends(document)
 
-        return [friend for friend in friends.keys()]
+        return [friend for friend in friends_dict.values()] if friends_dict else []
 
     def get_measurements(
         self,
@@ -760,14 +759,14 @@ class Client(MFPBase):
 
         return ids
 
-    def _get_friends(self, document) -> dict[str, Friend]:
+    def _get_friends(self, document) -> dict[str, types.FriendDict]:
         friends_dict = OrderedDict()
         for next_data in document.xpath("//script[@id='__NEXT_DATA__']"):
             next_data_json = json.loads(next_data.text)
             for q in next_data_json["props"]["pageProps"]["dehydratedState"]["queries"]:
                 if "userFriends" in q["queryKey"]:
                     for f in q["state"]["data"]["friends"]:
-                        friends_dict[f["username"]] = Friend(**f)
+                        friends_dict[f["username"]] = types.FriendDict(**f)
         return friends_dict
 
     def _get_notes(self, date: datetime.date) -> Note:

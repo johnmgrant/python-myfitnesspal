@@ -1,4 +1,4 @@
-from myfitnesspal.client import Client  # noqa
+from .client import Client  # noqa
 
 __version__ = "2.1.2"
 
