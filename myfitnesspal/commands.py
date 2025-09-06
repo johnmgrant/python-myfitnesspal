@@ -90,3 +90,13 @@ def day(super_args, *extra, **kwargs):
     print(f"Water: {day.water}")
     if day.notes:
         print(f"[italic]{day.notes}[/italic]")
+
+
+@command("Display MyFitnessPal friends list.")
+def friends(super_args, *extra, **kwargs):
+    client = Client(log_requests_to=super_args.log_requests_to)
+    friends = client.get_friends()
+
+    print("[bold]MyFitnessPal Friends[/bold]")
+    for friend in friends:
+        print(f"* {friend}")

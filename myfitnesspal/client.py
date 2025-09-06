@@ -24,6 +24,7 @@ from .entry import Entry
 from .exceptions import MyfitnesspalLoginError, MyfitnesspalRequestFailed
 from .exercise import Exercise
 from .fooditem import FoodItem
+from .friend import Friend
 from .meal import Meal
 from .note import Note
 
@@ -215,6 +216,13 @@ class Client(MFPBase):
             parse.urljoin(self.BASE_URL_SECURE, "measurements/edit")
             + "?"
             + parse.urlencode({"page": page, "type": measurement_name})
+        )
+
+    def _get_url_for_friends(self) -> str:
+        return (
+            parse.urljoin(self.BASE_URL_SECURE, "friends")
+            + "?"
+            + parse.urlencode({"sort_order": "last_login", "limit": 120})
         )
 
     def _get_request_for_url(
@@ -594,6 +602,13 @@ class Client(MFPBase):
             lower_bound, upper_bound = upper_bound, lower_bound
         return upper_bound, lower_bound
 
+    def get_friends(self) -> list[str]:
+        """Returns a list of friends."""
+        document = self._get_document_for_url(self._get_url_for_friends())
+        friends = self._get_friends(document)
+
+        return [friend for friend in friends.keys()]
+
     def get_measurements(
         self,
         measurement="Weight",
@@ -744,6 +759,16 @@ class Client(MFPBase):
                         ids[q["queryKey"][1]] = ""
 
         return ids
+
+    def _get_friends(self, document) -> dict[str, Friend]:
+        friends_dict = OrderedDict()
+        for next_data in document.xpath("//script[@id='__NEXT_DATA__']"):
+            next_data_json = json.loads(next_data.text)
+            for q in next_data_json["props"]["pageProps"]["dehydratedState"]["queries"]:
+                if "userFriends" in q["queryKey"]:
+                    for f in q["state"]["data"]["friends"]:
+                        friends_dict[f["username"]] = Friend(**f)
+        return friends_dict
 
     def _get_notes(self, date: datetime.date) -> Note:
         result = self._get_request_for_url(
