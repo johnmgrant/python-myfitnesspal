@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from http.cookiejar import CookieJar
 from typing import Any, Callable, Dict, List, Optional
 
 from typing_extensions import Literal, TypedDict
+
+SupportedBrowserCallable = Callable[..., CookieJar]
+
+BrowserCookie3Dict = dict[str, SupportedBrowserCallable]
 
 
 class CommandDefinition(TypedDict):

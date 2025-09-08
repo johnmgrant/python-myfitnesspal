@@ -61,6 +61,13 @@ class Client(MFPBase):
         "kilojoules": (Energy, "kJ"),
     }
 
+    # Support all browsers except Safari
+    SUPPORTED_BROWSERS: list[types.SupportedBrowserCallable] = [
+        fn
+        for name, fn in cast(types.BrowserCookie3Dict, browser_cookie3.__dict__.items())
+        if callable(fn) and name not in {"safari"}
+    ]
+
     def __init__(
         self,
         cookiejar: CookieJar | None = None,
@@ -88,9 +95,7 @@ class Client(MFPBase):
             self.session.cookies.update(cookiejar)
         else:
             for domain_name in self.COOKIE_DOMAINS:
-                self.session.cookies.update(
-                    browser_cookie3.arc(domain_name=domain_name)
-                )
+                self._load_browser_cookies(domain_name=domain_name)
 
         self._auth_data = self._get_auth_data()
         self._user_metadata = self._get_user_metadata()
@@ -125,6 +130,18 @@ class Client(MFPBase):
 
         """
         return self.user_metadata["username"]
+
+    def _load_browser_cookies(self, domain_name=""):
+        """Try to load cookies from all supported browsers and return combined cookiejar
+        Optionally pass in a domain name to only load cookies from the specified domain
+        """
+        for cookie_fn in self.SUPPORTED_BROWSERS:
+            try:
+                cookiejar = cookie_fn(domain_name=domain_name)
+                for cookie in cookiejar:
+                    self.session.cookies.set_cookie(cookie)
+            except Exception:
+                pass
 
     def _get_auth_data(self) -> types.AuthData:
         result = self._get_request_for_url(
@@ -298,7 +315,9 @@ class Client(MFPBase):
 
         return json.loads(content)
 
-    def _get_measurement(self, name: str, value: float | None) -> MeasureBase | float | None:
+    def _get_measurement(
+        self, name: str, value: float | None
+    ) -> MeasureBase | float | None:
         if not self.unit_aware:
             return value
         measure, kwarg = self.DEFAULT_MEASURE_AND_UNIT[name]
@@ -378,7 +397,7 @@ class Client(MFPBase):
 
             while True:
                 this = this.getnext()
-                if not this.attrib.get("class") is None:
+                if this.attrib.get("class") is not None:
                     break
                 columns = this.findall("td")
 
@@ -441,7 +460,7 @@ class Client(MFPBase):
             row = ex_header.findall("tbody")[0].findall("tr")[0]
             entries = []
             while True:
-                if not row.attrib.get("class") is None:
+                if row.attrib.get("class") is not None:
                     break
                 columns = row.findall("td")
 
