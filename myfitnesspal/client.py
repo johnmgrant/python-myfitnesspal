@@ -298,7 +298,7 @@ class Client(MFPBase):
 
         return json.loads(content)
 
-    def _get_measurement(self, name: str, value: float | None) -> MeasureBase:
+    def _get_measurement(self, name: str, value: float | None) -> MeasureBase | float | None:
         if not self.unit_aware:
             return value
         measure, kwarg = self.DEFAULT_MEASURE_AND_UNIT[name]
@@ -337,7 +337,7 @@ class Client(MFPBase):
         fields = self._get_fields(document)
 
         nutrition = {}
-        for n in range(1, len(columns)):
+        for n in range(1, len(columns) - 1):
             column = columns[n]
             try:
                 nutr_name = fields[n]
@@ -392,7 +392,7 @@ class Client(MFPBase):
 
                 nutrition = {}
 
-                for n in range(1, len(columns)):
+                for n in range(1, len(columns) - 1):
                     column = columns[n]
                     try:
                         nutr_name = fields[n]
@@ -476,7 +476,7 @@ class Client(MFPBase):
 
                 attrs = {}
 
-                for n in range(1, len(columns)):
+                for n in range(1, len(columns) - 1):
                     column = columns[n]
                     try:
                         attr_name = fields[n]
@@ -559,9 +559,23 @@ class Client(MFPBase):
                 f"Error: Friend {kwargs.get('friend_username')}'s diary is private."
             )
 
-        meals = self._get_meals(document)
-        goals = self._get_goals(document)
-        complete = self._get_completion(document)
+        meals: list[Meal] = []
+        try:
+            meals = self._get_meals(document)
+        except Exception as e:
+            print(f"Error fetching meals: {e}")
+
+        goals = None
+        try:
+            goals = self._get_goals(document)
+        except Exception as e:
+            print(f"Error fetching goals: {e}")
+
+        complete = False
+        try:
+            complete = self._get_completion(document)
+        except Exception as e:
+            print(f"Error fetching completion: {e}")
 
         # Since this data requires an additional request, let's just
         # allow the day object to run the request if necessary.
@@ -1384,9 +1398,10 @@ class Client(MFPBase):
         recipe_dict["nutrition"]["polyunsaturatedFatContent"] = document.xpath(
             '//*[@id="polyunsaturated_fat"]/td[1]/span[2]'
         )[0].text.strip(" \n")
-        recipe_dict["nutrition"]["unsaturatedFatContent"] = int(
-            recipe_dict["nutrition"]["polyunsaturatedFatContent"]
-        ) + int(recipe_dict["nutrition"]["monounsaturatedFatContent"])
+        recipe_dict["nutrition"]["unsaturatedFatContent"] = str(
+            int(recipe_dict["nutrition"]["polyunsaturatedFatContent"])
+            + int(recipe_dict["nutrition"]["monounsaturatedFatContent"])
+        )
         recipe_dict["nutrition"]["transFatContent"] = document.xpath(
             '//*[@id="trans_fat"]/td[1]/span[2]'
         )[0].text.strip(" \n")

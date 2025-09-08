@@ -1,6 +1,8 @@
 import datetime
 from typing import Callable, Dict, Generator, List, Optional
 
+from measurement.measures import Volume
+
 from myfitnesspal.base import MFPBase
 
 from . import types
@@ -18,7 +20,7 @@ class Day(MFPBase):
         meals: Optional[List[Meal]] = None,
         goals: Optional[Dict[str, float]] = None,
         notes: Optional[Callable[[], str]] = None,
-        water: Optional[Callable[[], float]] = None,
+        water: Optional[Callable[[], float | Volume]] = None,
         exercises: Optional[Callable[[], List[Exercise]]] = None,
         complete: bool = False,
     ):
@@ -87,7 +89,7 @@ class Day(MFPBase):
         return self._notes()
 
     @property
-    def water(self) -> float:
+    def water(self) -> float | Volume:
         """Returns water."""
         if not self._water:
             return 0
