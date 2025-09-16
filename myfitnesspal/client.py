@@ -5,6 +5,7 @@ import json
 import logging
 import re
 import uuid
+import warnings
 from collections import OrderedDict
 from http.cookiejar import CookieJar
 from pathlib import Path
@@ -78,9 +79,7 @@ class Client(MFPBase):
         self._request_counter = 0
         self._log_requests_to: Path | None = None
         if log_requests_to:
-            self._log_requests_to = log_requests_to / Path(
-                str(self._client_instance_id)
-            )
+            self._log_requests_to = log_requests_to / Path(str(self._client_instance_id))
             self._log_requests_to.mkdir(parents=True, exist_ok=True)
 
         self.unit_aware = unit_aware
@@ -137,6 +136,7 @@ class Client(MFPBase):
         """
         for cookie_fn in self.SUPPORTED_BROWSERS:
             try:
+                warnings.filterwarnings("ignore", category=DeprecationWarning)
                 cookiejar = cookie_fn(domain_name=domain_name)
                 for cookie in cookiejar:
                     self.session.cookies.set_cookie(cookie)
@@ -191,9 +191,7 @@ class Client(MFPBase):
             ]
         )
         metadata_url = (
-            parse.urljoin(self.BASE_API_URL, f"/v2/users/{self.user_id}")
-            + "?"
-            + query_string
+            parse.urljoin(self.BASE_API_URL, f"/v2/users/{self.user_id}") + "?" + query_string
         )
         result = self._get_request_for_url(metadata_url, send_token=True)
         if not result.ok:
@@ -212,22 +210,15 @@ class Client(MFPBase):
             return name
         return self.ABBREVIATIONS[name]
 
-    def _get_url_for_date(
-        self, date: datetime.date, username: str, friend_username=None
-    ) -> str:
+    def _get_url_for_date(self, date: datetime.date, username: str, friend_username=None) -> str:
         if friend_username is not None:
             name = friend_username
         else:
             name = username
         date_str = date.strftime("%Y-%m-%d")
-        return (
-            parse.urljoin(self.BASE_URL_SECURE, "food/diary/" + name)
-            + f"?date={date_str}"
-        )
+        return parse.urljoin(self.BASE_URL_SECURE, "food/diary/" + name) + f"?date={date_str}"
 
-    def _get_url_for_measurements(
-        self, page: int = 1, measurement_name: str = ""
-    ) -> str:
+    def _get_url_for_measurements(self, page: int = 1, measurement_name: str = "") -> str:
         return (
             parse.urljoin(self.BASE_URL_SECURE, "measurements/edit")
             + "?"
@@ -273,9 +264,9 @@ class Client(MFPBase):
         if self._log_requests_to:
             with open(
                 self._log_requests_to
-                / Path(
-                    str(self._request_counter).zfill(3) + "__" + str(request_id)
-                ).with_suffix(".json"),
+                / Path(str(self._request_counter).zfill(3) + "__" + str(request_id)).with_suffix(
+                    ".json"
+                ),
                 "w",
                 encoding="utf-8",
             ) as outf:
@@ -315,9 +306,7 @@ class Client(MFPBase):
 
         return json.loads(content)
 
-    def _get_measurement(
-        self, name: str, value: float | None
-    ) -> MeasureBase | float | None:
+    def _get_measurement(self, name: str, value: float | None) -> MeasureBase | float | None:
         if not self.unit_aware:
             return value
         measure, kwarg = self.DEFAULT_MEASURE_AND_UNIT[name]
@@ -442,8 +431,7 @@ class Client(MFPBase):
     def _get_url_for_exercise(self, date: datetime.date, username: str) -> str:
         date_str = date.strftime("%Y-%m-%d")
         return (
-            parse.urljoin(self.BASE_URL_SECURE, "exercise/diary/" + username)
-            + f"?date={date_str}"
+            parse.urljoin(self.BASE_URL_SECURE, "exercise/diary/" + username) + f"?date={date_str}"
         )
 
     def _get_exercise(self, document):
@@ -532,9 +520,7 @@ class Client(MFPBase):
         if len(element.getchildren()) == 0:
             value = self._get_numeric(element.text)
         else:
-            value = self._get_numeric(
-                element.xpath("span[@class='macro-value']")[0].text
-            )
+            value = self._get_numeric(element.xpath("span[@class='macro-value']")[0].text)
 
         return value
 
@@ -574,9 +560,7 @@ class Client(MFPBase):
             friend_username is not None
             and "user maintains a private diary" in document.text_content()
         ):
-            raise Exception(
-                f"Error: Friend {kwargs.get('friend_username')}'s diary is private."
-            )
+            raise Exception(f"Error: Friend {kwargs.get('friend_username')}'s diary is private.")
 
         meals: list[Meal] = []
         try:
@@ -648,9 +632,7 @@ class Client(MFPBase):
         upper_bound: datetime.date | None = None,
     ) -> dict[datetime.date, float]:
         """Returns measurements of a given name between two dates."""
-        upper_bound, lower_bound = self._ensure_upper_lower_bound(
-            lower_bound, upper_bound
-        )
+        upper_bound, lower_bound = self._ensure_upper_lower_bound(lower_bound, upper_bound)
 
         # get the URL for the main check in page
         document = self._get_document_for_url(self._get_url_for_measurements())
@@ -667,9 +649,7 @@ class Client(MFPBase):
         # retrieve entries until finished
         while True:
             # retrieve the HTML from MyFitnessPal
-            document = self._get_document_for_url(
-                self._get_url_for_measurements(page, measurement)
-            )
+            document = self._get_document_for_url(self._get_url_for_measurements(page, measurement))
 
             # parse the HTML for measurement entries and add to dictionary
             results = self._get_measurements(document)
@@ -751,8 +731,9 @@ class Client(MFPBase):
         # throw an error if it failed.
         if not result.ok:
             raise MyfitnesspalRequestFailed(
-                "Unable to update measurement in MyFitnessPal: "
-                "status code: {status}".format(status=result.status_code)
+                "Unable to update measurement in MyFitnessPal: status code: {status}".format(
+                    status=result.status_code
+                )
             )
 
     def _get_measurements(self, document):
@@ -841,9 +822,7 @@ class Client(MFPBase):
                 "Report API may not be able to look back this far. Some results may be incorrect."
             )
 
-        upper_bound, lower_bound = self._ensure_upper_lower_bound(
-            lower_bound, upper_bound
-        )
+        upper_bound, lower_bound = self._ensure_upper_lower_bound(lower_bound, upper_bound)
 
         assert upper_bound
         assert lower_bound
@@ -872,10 +851,7 @@ class Client(MFPBase):
         return (
             parse.urljoin(
                 self.BASE_URL_SECURE,
-                "api/services/reports/results/"
-                + report_category.lower()
-                + "/"
-                + report_name,
+                "api/services/reports/results/" + report_category.lower() + "/" + report_name,
             )
             + f"/{str(delta.days)}.json"
         )
@@ -909,9 +885,7 @@ class Client(MFPBase):
         """Search for foods matching a specified query."""
         search_url = parse.urljoin(self.BASE_URL_SECURE, self.SEARCH_PATH)
         document = self._get_document_for_url(search_url)
-        authenticity_token = document.xpath(
-            "(//input[@name='authenticity_token']/@value)[1]"
-        )[0]
+        authenticity_token = document.xpath("(//input[@name='authenticity_token']/@value)[1]")[0]
 
         result = self.session.post(
             search_url,
@@ -942,9 +916,7 @@ class Client(MFPBase):
             mfp_id = int(a.get("data-external-id"))
             mfp_name = a.text
             verif = (
-                True
-                if item_div.xpath(".//div[@class='verified verified-list-icon']")
-                else False
+                True if item_div.xpath(".//div[@class='verified verified-list-icon']") else False
             )
             calories = None
             brand = ""
@@ -954,9 +926,7 @@ class Client(MFPBase):
                 if len(nutr_info) >= 3:
                     brand = " ".join(nutr_info[0:-2]).strip()
                 calories = float(nutr_info[-1].replace("calories", "").strip())
-            items.append(
-                FoodItem(mfp_id, mfp_name, brand, verif, calories, client=self)
-            )
+            items.append(FoodItem(mfp_id, mfp_name, brand, verif, calories, client=self))
 
         return items
 
@@ -976,9 +946,7 @@ class Client(MFPBase):
                 for name in requested_fields
             ]
         )
-        metadata_url = (
-            parse.urljoin(self.BASE_API_URL, f"/v2/foods/{mfp_id}") + "?" + query_string
-        )
+        metadata_url = parse.urljoin(self.BASE_API_URL, f"/v2/foods/{mfp_id}") + "?" + query_string
         result = self._get_request_for_url(metadata_url, send_token=True)
         if not result.ok:
             raise MyfitnesspalRequestFailed()
@@ -1048,9 +1016,7 @@ class Client(MFPBase):
 
         SUBMIT_PATH = "food/submit"
         SUBMIT_DUPLICATE_PATH = "food/duplicate"
-        SUBMIT_NEW_PATH = (
-            f"food/new?date={datetime.datetime.today().strftime('%Y-%m-%d')}&meal=0"
-        )
+        SUBMIT_NEW_PATH = f"food/new?date={datetime.datetime.today().strftime('%Y-%m-%d')}&meal=0"
         SUBMIT_POST_PATH = "food/new"
 
         # save current date in local variable for reusing
@@ -1059,9 +1025,7 @@ class Client(MFPBase):
         # get Authenticity Token
         url = parse.urljoin(self.BASE_URL_SECURE, SUBMIT_PATH)
         document = self._get_document_for_url(url)
-        authenticity_token = document.xpath(
-            "(//input[@name='authenticity_token']/@value)[1]"
-        )[0]
+        authenticity_token = document.xpath("(//input[@name='authenticity_token']/@value)[1]")[0]
         utf8_field = document.xpath("(//input[@name='utf8']/@value)[1]")[0]
 
         # submit brand and description --> Possible returns duplicates warning
@@ -1089,9 +1053,7 @@ class Client(MFPBase):
         # Passed Brand and Desc. Ready submit Form but needs new Authenticity Token
         url = parse.urljoin(self.BASE_URL_SECURE, SUBMIT_NEW_PATH)
         document = self._get_document_for_url(url)
-        authenticity_token = document.xpath(
-            "(//input[@name='authenticity_token']/@value)[1]"
-        )[0]
+        authenticity_token = document.xpath("(//input[@name='authenticity_token']/@value)[1]")[0]
         utf8_field = document.xpath("(//input[@name='utf8']/@value)[1]")[0]
 
         # Step4 - Build Post Data and finally submit new Food with nutritional Details
@@ -1149,9 +1111,7 @@ class Client(MFPBase):
         ):
             error = document.xpath("//*[@id='errorExplanation']/ul/li")[0].text
             error = error.replace("Description ", "")  # For cosmetic reasons
-            raise MyfitnesspalRequestFailed(
-                f"Unable to submit food to MyFitnessPal: {error}"
-            )
+            raise MyfitnesspalRequestFailed(f"Unable to submit food to MyFitnessPal: {error}")
 
         # Would like to return FoodItem, but seems that it take
         # to long until the submitted food is available in the DB
@@ -1203,9 +1163,7 @@ class Client(MFPBase):
         auth_header["mfp-user-id"] = f"{self.user_id}"
 
         # Get Request for old goal values
-        old_goals_url = parse.urljoin(
-            self.BASE_API_URL, f"v2/nutrient-goals?date={today}"
-        )
+        old_goals_url = parse.urljoin(self.BASE_API_URL, f"v2/nutrient-goals?date={today}")
         old_goals_document = self.session.get(old_goals_url, headers=auth_header)
         old_goals = json.loads(old_goals_document.text)
 
@@ -1213,20 +1171,10 @@ class Client(MFPBase):
         # If no macro goals were provided calculate them with percentage value
         if carbohydrates is None or protein is None or fat is None:
             # If even no macro percentages values were provided calculate them from old values
-            if (
-                percent_carbohydrates is None
-                or percent_protein is None
-                or percent_fat is None
-            ):
-                old_energy_value = old_goals["items"][0]["default_goal"]["energy"][
-                    "value"
-                ]
-                old_energy_unit = old_goals["items"][0]["default_goal"]["energy"][
-                    "unit"
-                ]
-                old_carbohydrates = old_goals["items"][0]["default_goal"][
-                    "carbohydrates"
-                ]
+            if percent_carbohydrates is None or percent_protein is None or percent_fat is None:
+                old_energy_value = old_goals["items"][0]["default_goal"]["energy"]["value"]
+                old_energy_unit = old_goals["items"][0]["default_goal"]["energy"]["unit"]
+                old_carbohydrates = old_goals["items"][0]["default_goal"]["carbohydrates"]
                 old_fat = old_goals["items"][0]["default_goal"]["fat"]
                 old_protein = old_goals["items"][0]["default_goal"]["protein"]
 
@@ -1237,9 +1185,7 @@ class Client(MFPBase):
                             f"Unexpected energy unit in historical goals: {old_energy_unit}"
                         )
                     if energy_unit not in ["kilojoules", "calories"]:
-                        raise ValueError(
-                            f"Unexpected energy unit in goals: {energy_unit}"
-                        )
+                        raise ValueError(f"Unexpected energy unit in goals: {energy_unit}")
 
                     if old_energy_unit == "kilojoules" and energy_unit == "calories":
                         old_energy_value *= 0.2388
@@ -1329,17 +1275,11 @@ class Client(MFPBase):
             RECIPES_PATH = f"recipe_parser?page={page_count}&sort_order=recent"
             recipes_url = parse.urljoin(self.BASE_URL_SECURE, RECIPES_PATH)
             document = self._get_document_for_url(recipes_url)
-            recipes = document.xpath(
-                "//*[@id='main']/ul[1]/li"
-            )  # get all items in the recipe list
+            recipes = document.xpath("//*[@id='main']/ul[1]/li")  # get all items in the recipe list
             for recipe_info in recipes:
-                recipe_path = recipe_info.xpath("./div[2]/h2/span[1]/a")[0].attrib[
-                    "href"
-                ]
+                recipe_path = recipe_info.xpath("./div[2]/h2/span[1]/a")[0].attrib["href"]
                 recipe_id = recipe_path.split("/")[-1]
-                recipe_title = recipe_info.xpath("./div[2]/h2/span[1]/a")[0].attrib[
-                    "title"
-                ]
+                recipe_title = recipe_info.xpath("./div[2]/h2/span[1]/a")[0].attrib["title"]
                 recipes_dict[recipe_id] = recipe_title
 
             # Check for Pagination
@@ -1377,9 +1317,7 @@ class Client(MFPBase):
         }
         recipe_dict["org_url"] = recipe_url
         recipe_dict["name"] = document.xpath('//*[@id="main"]/div[3]/div[2]/h1')[0].text
-        recipe_dict["recipeYield"] = document.xpath('//*[@id="recipe_servings"]')[
-            0
-        ].text
+        recipe_dict["recipeYield"] = document.xpath('//*[@id="recipe_servings"]')[0].text
 
         recipe_dict["recipeIngredient"] = []
         ingredients = document.xpath('//*[@id="main"]/div[4]/div/*/li')
@@ -1393,12 +1331,12 @@ class Client(MFPBase):
         recipe_dict["nutrition"]["carbohydrateContent"] = document.xpath(
             '//*[@id="carbs"]/td[1]/span[2]'
         )[0].text.strip(" \n")
-        recipe_dict["nutrition"]["fiberContent"] = document.xpath(
-            '//*[@id="fiber"]/td[1]/span[2]'
-        )[0].text.strip(" \n")
-        recipe_dict["nutrition"]["sugarContent"] = document.xpath(
-            '//*[@id="sugar"]/td[1]/span[2]'
-        )[0].text.strip(" \n")
+        recipe_dict["nutrition"]["fiberContent"] = document.xpath('//*[@id="fiber"]/td[1]/span[2]')[
+            0
+        ].text.strip(" \n")
+        recipe_dict["nutrition"]["sugarContent"] = document.xpath('//*[@id="sugar"]/td[1]/span[2]')[
+            0
+        ].text.strip(" \n")
         recipe_dict["nutrition"]["sodiumContent"] = document.xpath(
             '//*[@id="sodium"]/td[1]/span[2]'
         )[0].text.strip(" \n")
@@ -1441,9 +1379,7 @@ class Client(MFPBase):
         meals_url = parse.urljoin(self.BASE_URL_SECURE, meals_path)
         document = self._get_document_for_url(meals_url)
 
-        meals = document.xpath(
-            "//*[@id='matching']/li"
-        )  # get all items in the recipe list
+        meals = document.xpath("//*[@id='matching']/li")  # get all items in the recipe list
         _idx: int | None = None
         try:
             for _idx, meal in enumerate(meals):
@@ -1482,16 +1418,12 @@ class Client(MFPBase):
             raise Exception("No ingredients found when fetching meal.")
         else:
             for ingredient in ingredients:
-                recipe_dict["recipeIngredient"].append(
-                    ingredient.xpath("./td[1]")[0].text
-                )
+                recipe_dict["recipeIngredient"].append(ingredient.xpath("./td[1]")[0].text)
 
             total = document.xpath('//*[@id="mealTableTotal"]/tbody/tr')[0]
             recipe_dict["nutrition"] = {"@type": "NutritionInformation"}
             recipe_dict["nutrition"]["calories"] = total.xpath("./td[2]")[0].text
-            recipe_dict["nutrition"]["carbohydrateContent"] = total.xpath("./td[3]")[
-                0
-            ].text
+            recipe_dict["nutrition"]["carbohydrateContent"] = total.xpath("./td[3]")[0].text
             recipe_dict["nutrition"]["proteinContent"] = total.xpath("./td[5]")[0].text
             recipe_dict["nutrition"]["fatContent"] = total.xpath("./td[4]")[0].text
             recipe_dict["nutrition"]["sugarContent"] = total.xpath("./td[7]")[0].text
